@@ -8,6 +8,7 @@ from langchain.embeddings import CacheBackedEmbeddings
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+from langchain_core.callbacks import BaseCallbackHandler
 
 st.set_page_config(page_title="DocsGPT", page_icon="📜")
 
@@ -49,11 +50,15 @@ def embed_file(file):
     return retriever
 
 
+def save_message(message, role):
+    st.session_state["messages"].append({"message": message, "role": role})
+
+
 def send_message(message, role, save=True):
     with st.chat_message(role):
         st.markdown(message)
     if save:
-        st.session_state["messages"].append({"message": message, "role": role})
+        save_message(message, role)
 
 
 def display_message_history():
@@ -81,8 +86,30 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
+
+class ChatCallbackHandler(BaseCallbackHandler):
+    msg = ""
+
+    def on_llm_start(self, *args, **kwargs):
+        self.msgs = st.empty()
+
+    def on_llm_end(self, *args, **kwargs):
+        save_message(self.msg, "ai")
+
+    def on_llm_new_token(
+        self,
+        token,
+        *args,
+        **kwargs,
+    ):
+        self.msg += token
+        self.msgs.markdown(self.msg)
+
+
 llm = ChatOpenAI(
     temperature=0.5,
+    streaming=True,
+    callbacks=[ChatCallbackHandler()],
 )
 
 
@@ -103,7 +130,7 @@ if file:
             | prompt
             | llm
         )
-        res = chain.invoke(message)
-        send_message(res.content, "ai")
+        with st.chat_message("ai"):
+            res = chain.invoke(message)
 else:
     st.session_state["messages"] = []
