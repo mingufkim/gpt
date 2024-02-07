@@ -131,6 +131,6 @@ if file:
             | llm
         )
         with st.chat_message("ai"):
-            res = chain.invoke(message)
+            chain.invoke(message)
 else:
     st.session_state["messages"] = []

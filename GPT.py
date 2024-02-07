@@ -15,7 +15,7 @@ st.markdown(
     
     ---
     ## Apps
-    - [ ] [DocsGPT](/DocsGPT)
+    - [x] [DocsGPT](/DocsGPT)
     
     ---
     ## Tools
