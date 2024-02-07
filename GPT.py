@@ -16,11 +16,14 @@ st.markdown(
     ---
     ## Apps
     - [x] [DocsGPT](/DocsGPT)
+    - [x] [PvtGPT](/PvtGPT)
     
     ---
     ## Tools
     - Python
+    - LangChain
     - Streamlit
+    - Ollama
     
     """
 )
