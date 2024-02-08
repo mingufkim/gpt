@@ -1,8 +1,10 @@
 import streamlit as st
+import json
 from langchain_community.retrievers import WikipediaRetriever
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.document_loaders import UnstructuredFileLoader
 from langchain_core.callbacks import StreamingStdOutCallbackHandler
+from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
@@ -195,6 +197,16 @@ Questions: {context}
 formatting_chain = formatting_prompt | llm
 
 
+class JsonOutputParser(BaseOutputParser):
+
+    def parse(self, text):
+        text = text.replace("```", "").replace("json", "")
+        return json.loads(text)
+
+
+output_parser = JsonOutputParser()
+
+
 @st.cache_resource(show_spinner="Loading...")
 def split_file(file):
     file_content = file.read()
@@ -211,6 +223,19 @@ def split_file(file):
     return docs
 
 
+@st.cache_resource(show_spinner="Loading...")
+def quiz_chain(_docs, topic):
+    chain = {"context": questions_chain} | formatting_chain | output_parser
+    return chain.invoke(_docs)
+
+
+@st.cache_resource(show_spinner="Searching...")
+def wiki_search(topic):
+    retriever = WikipediaRetriever(top_k_results=5, lang="en")
+    docs = retriever.get_relevant_documents(topic)
+    return docs
+
+
 with st.sidebar:
     docs = None
     choice = st.selectbox("Choose one", ["File", "Wikipedia"])
@@ -221,9 +246,7 @@ with st.sidebar:
     else:
         topic = st.text_input("Search Wikipedia for a topic")
         if topic:
-            retriever = WikipediaRetriever(top_k_results=5, lang="en")
-            with st.status("Searching Wikipedia..."):
-                docs = retriever.get_relevant_documents(topic)
+            docs = wiki_search(topic)
 
 
 if not docs:
@@ -237,12 +260,13 @@ if not docs:
     """
     )
 else:
-    start = st.button("Start")
-
-    if start:
-        questions_response = questions_chain.invoke(docs)
-        st.write(questions_response.content)
-        formatting_response = formatting_chain.invoke(
-            {"context": questions_response.content}
-        )
-        st.write(formatting_response.content)
+    res = quiz_chain(docs, topic if topic else file.name)
+    with st.form("questions_form"):
+        for question in res["questions"]:
+            st.markdown(f"### {question['question']}")
+            a = st.radio("", [answer["answer"] for answer in question["answers"]], index=None)
+            if {"answer": a, "correct": True} in question["answers"]:
+                st.success("Correct!")
+            elif a is not None:
+                st.error("Incorrect!")
+        submit = st.form_submit_button("Submit")
