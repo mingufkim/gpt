@@ -17,6 +17,7 @@ st.markdown(
     ## Apps
     - [x] [DocsGPT](/DocsGPT)
     - [x] [PvtGPT](/PvtGPT)
+    - [x] [QuizGPT](/QuizGPT)
     
     ---
     ## Tools
