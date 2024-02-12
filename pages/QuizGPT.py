@@ -264,7 +264,9 @@ else:
     with st.form("questions_form"):
         for question in res["questions"]:
             st.markdown(f"### {question['question']}")
-            a = st.radio("", [answer["answer"] for answer in question["answers"]], index=None)
+            a = st.radio(
+                "", [answer["answer"] for answer in question["answers"]], index=None
+            )
             if {"answer": a, "correct": True} in question["answers"]:
                 st.success("Correct!")
             elif a is not None:
